@@ -31,27 +31,22 @@ module.exports.addWork = addWork;
 
 if(cluster.isMaster) {
     const cpus = require('os').cpus().length;
-    console.log('Found ' + cpus + ' cpus!');
+    //console.log('Found ' + cpus + ' cpus!');
     
     for(let i=0; i<cpus; i++) {
         CPUS[i] = 'idle';
     }
 
-    cluster.on('online', function(worker) {
-        //console.log('Worker ' + worker.process.pid + ' is online');
-    });
+    //cluster.on('online', function(worker) {
+        //console.log('Worker online', worker.process.pid, worker.id);
+    //});
     
-    cluster.on('exit', function(worker, code, signal) {
-        //console.log('Worker died ' +  worker.process.pid + 
-        //            ' Exit Code: ' + code + 
-        //            ' Signal: ' + signal);
-    });
+    //cluster.on('exit', function(worker, code, signal) {
+    //    console.log('Worker died', worker.process.pid, code, signal);
+    //});
 
     cluster.on('message', (worker, message, handle) => {
-      if (arguments.length === 2) {
-        console.log("message from worker: ",worker, message, handle)
-      }
-      // ...
+        console.log("message from worker: ", message, handle)
     });
 
 
@@ -62,16 +57,23 @@ if(cluster.isMaster) {
         if(pendingWorks > 0 && idleCpu) {
             CPUS[idleCpu] = 'busy';
             console.log('Assigning work to cpu: ',idleCpu);
-            cluster.fork({idleCpu:idleCpu, work:PENDING_WORKS.pop() });
+            cluster.fork().send({idleCpu:idleCpu, work:PENDING_WORKS.pop() })
+            //cluster.worker[<id>].send({idleCpu:idleCpu, work:PENDING_WORKS.pop() })
         }
     },100);
 }
 else{
-    let idleCpu = process.env['idleCpu'];
+    process.on('message', (msg) => {
+        console.log('msg from master',msg);
+        process.send({success:false, msg: "work done", pid: process.pid})
+        process.exit(0);
+    });
+
+    /*let idleCpu = process.env['idleCpu'];
     let work = process.env['work'];
 
-    console.log("isPromise",isPromise(work))
-    if(isPromise(work) != false) {
+    console.log("isPromise",isPromise(work),typeof work,work)
+    if(isPromise(work) == false) {
         console.log("work must be a promise, found: ", typeof work, work);
         process.send({success:false, msg: "work must be a promise, found", pid: process.pid})
         process.exit(0)
@@ -92,5 +94,5 @@ else{
             process.send({success:false, msg: e, pid: process.pid})
             process.exit(0)
         });
-    }    
+    }*/    
 }
