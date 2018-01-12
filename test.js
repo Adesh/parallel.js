@@ -1,5 +1,5 @@
 /* --- TEST --- */
-let parallel = require('./parallel');
+let parallel = require('./index');
 
 
 let p1 = new Promise(function(resolve, reject){ 
@@ -56,7 +56,7 @@ function getTimeDiff(start) {
     return time_diff/1000;
 }
 
-console.log(parallel.addWork)
+//console.log(parallel.addWork)
 //setTimeout(processSequentially, 1000);
 //setTimeout(processParallelyInSameThread, 1000);
 setTimeout(processParallelyInDiffThread, 1000);

@@ -31,16 +31,11 @@ module.exports.addWork = addWork;
 
 if(cluster.isMaster) {
     const cpus = require('os').cpus().length;
-    //console.log('Found ' + cpus + ' cpus!');
     
     for(let i=0; i<cpus; i++) {
         CPUS[i] = 'idle';
     }
 
-    //cluster.on('online', function(worker) {
-        //console.log('Worker online', worker.process.pid, worker.id);
-    //});
-    
     //cluster.on('exit', function(worker, code, signal) {
     //    console.log('Worker died', worker.process.pid, code, signal);
     //});
@@ -57,42 +52,50 @@ if(cluster.isMaster) {
         if(pendingWorks > 0 && idleCpu) {
             CPUS[idleCpu] = 'busy';
             console.log('Assigning work to cpu: ',idleCpu);
-            cluster.fork().send({idleCpu:idleCpu, work:PENDING_WORKS.pop() })
-            //cluster.worker[<id>].send({idleCpu:idleCpu, work:PENDING_WORKS.pop() })
+            let work = PENDING_WORKS.pop();
+            console.log(work)
+            cluster.fork().send({idleCpu:idleCpu, work:work })
         }
     },100);
 }
 else{
     process.on('message', (msg) => {
-        console.log('msg from master',msg);
-        process.send({success:false, msg: "work done", pid: process.pid})
-        process.exit(0);
-    });
+        console.log('msg from master',msg);  
 
-    /*let idleCpu = process.env['idleCpu'];
-    let work = process.env['work'];
+        let idleCpu = msg['idleCpu'];
+        let work    = msg['work'];
 
-    console.log("isPromise",isPromise(work),typeof work,work)
-    if(isPromise(work) == false) {
-        console.log("work must be a promise, found: ", typeof work, work);
-        process.send({success:false, msg: "work must be a promise, found", pid: process.pid})
-        process.exit(0)
-    }
-    else {
-        console.log("work received: ", typeof work, work);
-
-        work
-        .then(res=>{
-            console.log("Freeing CPU with response ",idleCpu,res);
-            CPUS[idleCpu] = 'idle';
-            process.send({success:true, msg: res, pid: process.pid})
+        if(isPromise(work) == false) {
+            console.log("work must be a promise, found: ", typeof work, work);
+            process.send({
+                success:false, 
+                msg: "work must be a promise, found", 
+                pid: process.pid
+            })
             process.exit(0)
-        })
-        .catch(e=>{
-            console.log("Freeing CPU with error ",idleCpu,e);   
-            CPUS[idleCpu] = 'idle';
-            process.send({success:false, msg: e, pid: process.pid})
-            process.exit(0)
-        });
-    }*/    
+        }
+        else {
+            work
+            .then(res=>{
+                console.log("Freeing CPU with response ",idleCpu,res);
+                CPUS[idleCpu] = 'idle';
+                process.send({
+                    success:true, 
+                    msg: res, 
+                    pid: process.pid
+                })
+                process.exit(0)
+            })
+            .catch(e=>{
+                console.log("Freeing CPU with error ",idleCpu,e);   
+                CPUS[idleCpu] = 'idle';
+                process.send({
+                    success:false, 
+                    msg: e, 
+                    pid: process.pid
+                })
+                process.exit(0)
+            });
+        }
+    });   
 }
